@@ -65,6 +65,7 @@ func newMCPServer(logger *log.Logger) *mcp.Server {
 		}, nil, nil
 	})
 	registerFilesystemTools(server)
+	registerCommandTools(server, logger)
 
 	return server
 }

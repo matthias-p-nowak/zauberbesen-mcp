@@ -13,9 +13,16 @@ Available tools:
 - `edit_file`
 - `write_file`
 - `write_lines`
+- `exec`
+- `shell`
 
 Filesystem access is intentionally limited only by the container and the OS
 user running Zauberbesen.
+
+`exec` launches a program directly. `shell` passes a command string to
+`bash -lc`. Both support an optional working directory, one-shot stdin,
+timeout override, and progress notifications, and return stdout, stderr, and
+exit code separately.
 
 ## Run
 

@@ -41,6 +41,24 @@ The shared bounded-text accumulator retains complete result items up to 64 KiB
 and reports truncation plus the number of omitted items. This applies to
 listing entries, grep matches, and numbered read lines.
 
+`registerCommandTools` registers synchronous `exec` and `shell` handlers from
+`tools_commands.go`. Both normalize into a shared command runner. `exec` passes
+an executable and argument array directly to `os/exec`; `shell` invokes
+`bash -lc` with the supplied command.
+
+The runner uses a five-minute default context timeout, accepts positive
+caller overrides, and connects the supplied stdin string before closing stdin.
+Commands run in a new Unix process group; cancellation or timeout kills the
+group so shell descendants do not remain behind. Nonzero command exits are
+normal tool results, while failure to start a process is a tool error.
+
+Stdout and stderr use independent first-output buffers capped at 64 KiB and
+have separate truncation flags. The final structured result includes both
+streams, exit code, and timeout status. Command startup and completion are
+logged. When progress is requested and the MCP caller supplied a progress
+token, the handler sends best-effort startup, periodic running, and completion
+notifications through the active MCP session.
+
 ## Verification
 
 Tests connect an MCP client to a temporary Streamable HTTP server and call the
@@ -51,5 +69,10 @@ Filesystem tests cover current-directory reporting, hidden, recursive, and
 entry-limited listings, regex/fixed/glob search, ranged and truncated reads,
 exact replacement failure, whole-file creation, inclusive line replacement,
 deletion, and final-newline preservation.
+
+Command tests cover direct arguments, cwd, one-shot stdin, separate streams,
+nonzero exits, independent truncation, timeout/process-group termination,
+invalid timeouts, startup failures, and lifecycle logging. The complete suite
+also passes under Go's race detector.
 
 

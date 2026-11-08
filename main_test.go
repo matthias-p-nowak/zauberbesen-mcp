@@ -41,6 +41,10 @@ func TestPingTool(t *testing.T) {
 	if !ok || text.Text != "pong" {
 		t.Fatalf("content = %#v, want text pong", result.Content[0])
 	}
+	if err := session.Close(); err != nil {
+		t.Fatalf("close session: %v", err)
+	}
+	httpServer.Close()
 	if !strings.Contains(logs.String(), "tool=ping status=ok") {
 		t.Fatalf("logs do not contain tool status: %s", logs.String())
 	}
