@@ -64,6 +64,7 @@ func newMCPServer(logger *log.Logger) *mcp.Server {
 			Content: []mcp.Content{&mcp.TextContent{Text: "pong"}},
 		}, nil, nil
 	})
+	registerFilesystemTools(server)
 
 	return server
 }

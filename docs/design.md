@@ -35,9 +35,13 @@ running the server.
 
 The server provides these tools:
 
-- `list_files(path, recursive?)` lists one directory level by default or walks
-  recursively when requested. Results include hidden entries and report each
-  entry's path, type, and size.
+- `current_directory()` returns the server process's current working directory.
+  Relative filesystem paths and omitted command working directories resolve
+  from this directory.
+- `list_files(path, recursive?, limit?)` lists one directory level by default
+  or walks recursively when requested. Results include hidden entries and
+  report each entry's path, type, and size. Every call is entry-limited:
+  `limit` defaults to 1,000 and accepts values from 1 through 10,000.
 - `grep(pattern, path, glob?, fixed?)` searches file contents. `pattern` is a
   regular expression by default; `fixed: true` selects literal matching.
 - `read_file(path, startLine?, endLine?)` reads a complete file or a 1-based,

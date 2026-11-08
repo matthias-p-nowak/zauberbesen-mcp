@@ -1,7 +1,21 @@
 # Zauberbesen MCP
 
 A small Go MCP server for the llama.cpp web UI. It exposes Streamable HTTP at
-`/mcp` and currently provides a `ping` tool that returns `pong`.
+`/mcp`.
+
+Available tools:
+
+- `ping`
+- `current_directory`
+- `list_files`
+- `grep`
+- `read_file`
+- `edit_file`
+- `write_file`
+- `write_lines`
+
+Filesystem access is intentionally limited only by the container and the OS
+user running Zauberbesen.
 
 ## Run
 
