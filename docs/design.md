@@ -81,7 +81,8 @@ line-oriented prompts. Full-screen terminal applications are out of scope.
 - `start_process` starts a session and returns its session ID. `mode: "exec"`
   accepts an executable and arguments; `mode: "shell"` accepts a command for
   `bash -lc`. Both modes accept an optional working directory.
-- `write_stdin(sessionId, input)` writes input to a running session.
+- `write_stdin(sessionId, input, close?)` writes input to a running session and
+  may close stdin after the write so programs waiting for EOF can finish.
 - `poll_process(sessionId)` returns unread stdout and stderr, process status,
   and the exit code once available. Returned output is drained.
 - `terminate_process(sessionId)` stops the process and closes its session.

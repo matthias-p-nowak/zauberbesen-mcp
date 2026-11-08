@@ -3,11 +3,14 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -49,7 +52,7 @@ func (r *responseRecorder) Flush() {
 }
 
 // newMCPServer constructs the server and registers its tools.
-func newMCPServer(logger *log.Logger) *mcp.Server {
+func newMCPServer(logger *log.Logger, processManagers ...*processManager) *mcp.Server {
 	server := mcp.NewServer(&mcp.Implementation{
 		Name:    "zauberbesen",
 		Version: serverVersion,
@@ -66,6 +69,9 @@ func newMCPServer(logger *log.Logger) *mcp.Server {
 	})
 	registerFilesystemTools(server)
 	registerCommandTools(server, logger)
+	if len(processManagers) > 0 && processManagers[0] != nil {
+		registerProcessTools(server, processManagers[0])
+	}
 
 	return server
 }
@@ -137,10 +143,28 @@ func allowedOrigin() string {
 	return os.Getenv("ZAUBERBESEN_ALLOWED_ORIGIN")
 }
 
+// sessionIdleTimeout returns the configured interactive-session inactivity limit.
+func sessionIdleTimeout() (time.Duration, error) {
+	configured := os.Getenv("ZAUBERBESEN_SESSION_IDLE_TIMEOUT")
+	if configured == "" {
+		return defaultSessionIdleTimeout, nil
+	}
+	duration, err := time.ParseDuration(configured)
+	if err != nil || duration <= 0 {
+		return 0, errors.New("ZAUBERBESEN_SESSION_IDLE_TIMEOUT must be a positive duration")
+	}
+	return duration, nil
+}
+
 // main starts the Streamable HTTP MCP server.
 func main() {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
-	server := newMCPServer(logger)
+	idleTimeout, err := sessionIdleTimeout()
+	if err != nil {
+		logger.Fatal(err)
+	}
+	processManager := newProcessManager(logger, idleTimeout)
+	server := newMCPServer(logger, processManager)
 	handler := mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server {
 		return server
 	}, nil)
@@ -150,7 +174,27 @@ func main() {
 
 	listenAddress := address()
 	logger.Printf("zauberbesen listening on http://%s/mcp", listenAddress)
-	if err := http.ListenAndServe(listenAddress, mux); err != nil {
-		logger.Fatal(err)
+	httpServer := &http.Server{Addr: listenAddress, Handler: mux}
+	serverErrors := make(chan error, 1)
+	go func() {
+		serverErrors <- httpServer.ListenAndServe()
+	}()
+
+	signalContext, stopSignals := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stopSignals()
+	select {
+	case <-signalContext.Done():
+		logger.Print("zauberbesen shutting down")
+	case err = <-serverErrors:
+		if !errors.Is(err, http.ErrServerClosed) {
+			logger.Printf("http server failed: %v", err)
+		}
+	}
+
+	processManager.Close()
+	shutdownContext, cancelShutdown := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancelShutdown()
+	if err = httpServer.Shutdown(shutdownContext); err != nil {
+		logger.Printf("http shutdown failed: %v", err)
 	}
 }

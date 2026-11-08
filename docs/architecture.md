@@ -75,4 +75,35 @@ nonzero exits, independent truncation, timeout/process-group termination,
 invalid timeouts, startup failures, and lifecycle logging. The complete suite
 also passes under Go's race detector.
 
+## Interactive process manager
+
+`processManager` in `tools_processes.go` owns non-PTY sessions across MCP
+requests and registers `start_process`, `write_stdin`, `poll_process`, and
+`terminate_process`. Session IDs are random 128-bit values encoded as hex.
+Direct mode uses `os/exec` without shell parsing; shell mode uses `bash -lc`.
+
+Each process runs in a separate Unix process group and has pipe-backed stdin,
+stdout, and stderr. `write_stdin` serializes writes and can close stdin after a
+write. Polling atomically drains each output ring and returns process status and
+exit code. Explicit termination kills the process group, waits for collection,
+returns remaining output, and removes the session.
+
+Stdout and stderr have independent 64 KiB newest-data ring buffers. Overflow
+discards the oldest unread bytes and increments the dropped-byte count returned
+by the next poll. Polling resets each buffer and its counter.
+
+The manager's cleanup loop checks inactivity at a bounded interval. Sessions
+default to a 30-minute idle timeout configured by
+`ZAUBERBESEN_SESSION_IDLE_TIMEOUT`; polling or writing stdin resets activity.
+Expired sessions are removed and killed. `Close` rejects new sessions, kills
+all remaining process groups, and waits for them to exit.
+
+The executable uses signal-aware HTTP lifecycle management. SIGINT or SIGTERM
+closes the process manager and gracefully shuts down the HTTP server with a
+10-second deadline.
+
+Interactive tests cover direct and shell modes, stdin and EOF, output draining,
+newest-data overflow accounting, termination, expiration, validation, and
+configuration. The suite passes under Go's race detector.
+
 
