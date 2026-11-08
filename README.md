@@ -1,7 +1,37 @@
 # Zauberbesen MCP
 
 A small Go MCP server for the llama.cpp web UI. It exposes Streamable HTTP at
-`/mcp` and currently provides a `ping` tool that returns `pong`.
+`/mcp`.
+
+Available tools:
+
+- `ping`
+- `current_directory`
+- `list_files`
+- `grep`
+- `read_file`
+- `edit_file`
+- `write_file`
+- `write_lines`
+- `exec`
+- `shell`
+- `start_process`
+- `write_stdin`
+- `poll_process`
+- `terminate_process`
+
+Filesystem access is intentionally limited only by the container and the OS
+user running Zauberbesen.
+
+`exec` launches a program directly. `shell` passes a command string to
+`bash -lc`. Both support an optional working directory, one-shot stdin,
+timeout override, and progress notifications, and return stdout, stderr, and
+exit code separately.
+
+Interactive process tools provide non-PTY sessions for servers, REPLs, and
+line-oriented prompts. Sessions expire after 30 minutes without polling or
+input by default. Set `ZAUBERBESEN_SESSION_IDLE_TIMEOUT` to a positive Go
+duration such as `45m` to change that interval.
 
 ## Run
 

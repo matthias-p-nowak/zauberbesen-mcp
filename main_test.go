@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -41,6 +42,10 @@ func TestPingTool(t *testing.T) {
 	if !ok || text.Text != "pong" {
 		t.Fatalf("content = %#v, want text pong", result.Content[0])
 	}
+	if err := session.Close(); err != nil {
+		t.Fatalf("close session: %v", err)
+	}
+	httpServer.Close()
 	if !strings.Contains(logs.String(), "tool=ping status=ok") {
 		t.Fatalf("logs do not contain tool status: %s", logs.String())
 	}
@@ -58,6 +63,22 @@ func TestAddress(t *testing.T) {
 	t.Setenv("ZAUBERBESEN_ADDR", "127.0.0.1:9090")
 	if got := address(); got != "127.0.0.1:9090" {
 		t.Fatalf("configured address = %q", got)
+	}
+}
+
+// TestSessionIdleTimeout verifies the default and startup environment override.
+func TestSessionIdleTimeout(t *testing.T) {
+	t.Setenv("ZAUBERBESEN_SESSION_IDLE_TIMEOUT", "")
+	if got, err := sessionIdleTimeout(); err != nil || got != defaultSessionIdleTimeout {
+		t.Fatalf("default idle timeout = %s, %v", got, err)
+	}
+	t.Setenv("ZAUBERBESEN_SESSION_IDLE_TIMEOUT", "45m")
+	if got, err := sessionIdleTimeout(); err != nil || got != 45*time.Minute {
+		t.Fatalf("configured idle timeout = %s, %v", got, err)
+	}
+	t.Setenv("ZAUBERBESEN_SESSION_IDLE_TIMEOUT", "invalid")
+	if _, err := sessionIdleTimeout(); err == nil {
+		t.Fatal("invalid idle timeout did not fail")
 	}
 }
 

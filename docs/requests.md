@@ -9,3 +9,14 @@
 - Permit direct llama.cpp browser connections from loopback and private-network
   web origins without manual header configuration.
 
+## Filesystem and process tools
+
+- Provide filesystem discovery, content search, reading, and editing tools.
+- Report the server process's current working directory for resolving relative
+  paths.
+- Provide unrestricted direct and Bash-backed command execution; Docker and
+  the server's OS user remain the permission boundary.
+- Support both synchronous commands and non-PTY interactive process sessions.
+- Bound tool output and clean up abandoned interactive sessions as specified in
+  `docs/design.md`.
+
